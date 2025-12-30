@@ -17,18 +17,7 @@ export default function SetupPage() {
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null; // Will redirect to login via useAuth hook
-  }
-
+  // Check API key status on mount
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -41,10 +30,24 @@ export default function SetupPage() {
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoading) {
       checkStatus();
+    } else if (!isLoading) {
+      setIsCheckingStatus(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect to login via useAuth hook
+  }
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
