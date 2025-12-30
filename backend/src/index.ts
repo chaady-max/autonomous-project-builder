@@ -5,6 +5,7 @@ import analyzeRoutes from './routes/analyze';
 import generateRoutes from './routes/generate';
 import recommendRoutes from './routes/recommend';
 import settingsRoutes from './routes/settings';
+import authRoutes from './routes/auth';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/generate', generateRoutes);
 app.use('/api/recommend', recommendRoutes);

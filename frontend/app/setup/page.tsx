@@ -3,14 +3,28 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
 
 export default function SetupPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect to login via useAuth hook
+  }
 
   const handleSave = async () => {
     if (!apiKey.trim()) {

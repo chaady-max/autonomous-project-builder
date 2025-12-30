@@ -133,7 +133,7 @@ export default function UploadForm() {
               Autonomous Project Builder
             </h1>
             <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              v0.3
+              v0.4
             </span>
           </div>
           <p className="text-lg text-gray-600">
