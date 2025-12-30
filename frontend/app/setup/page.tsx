@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -11,8 +11,11 @@ export default function SetupPage() {
   const { isAuthenticated, isLoading, logout } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   if (isLoading) {
     return (
@@ -25,6 +28,23 @@ export default function SetupPage() {
   if (!isAuthenticated) {
     return null; // Will redirect to login via useAuth hook
   }
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await api.settings.getStatus();
+        setApiKeyConfigured(status.apiKeyConfigured);
+      } catch (err) {
+        console.error('Failed to check API key status:', err);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      checkStatus();
+    }
+  }, [isAuthenticated]);
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
@@ -44,6 +64,7 @@ export default function SetupPage() {
     try {
       await api.settings.saveApiKey(apiKey);
       setSuccess(true);
+      setApiKeyConfigured(true);
 
       // Redirect to home after 2 seconds
       setTimeout(() => {
@@ -53,6 +74,28 @@ export default function SetupPage() {
       setError(err.message || 'Failed to save API key');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!confirm('Are you sure you want to remove the API key? The app will fall back to local analysis mode.')) {
+      return;
+    }
+
+    setIsRemoving(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      await api.settings.removeApiKey();
+      setApiKeyConfigured(false);
+      setApiKey('');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to remove API key');
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -71,6 +114,28 @@ export default function SetupPage() {
 
         {/* Main Card */}
         <div className="bg-white rounded-lg shadow-xl p-8 border border-gray-200">
+          {/* Current Status */}
+          {!isCheckingStatus && (
+            <div className={`mb-6 p-4 rounded-lg border-2 ${
+              apiKeyConfigured
+                ? 'bg-green-50 border-green-300'
+                : 'bg-gray-50 border-gray-300'
+            }`}>
+              <p className={`font-semibold ${
+                apiKeyConfigured ? 'text-green-900' : 'text-gray-700'
+              }`}>
+                {apiKeyConfigured ? '✅ API Key Configured' : 'ℹ️ No API Key Configured'}
+              </p>
+              <p className={`text-sm mt-1 ${
+                apiKeyConfigured ? 'text-green-800' : 'text-gray-600'
+              }`}>
+                {apiKeyConfigured
+                  ? 'Using Claude AI for project analysis'
+                  : 'Using local analysis mode (rule-based)'}
+              </p>
+            </div>
+          )}
+
           {/* Instructions */}
           <div className="mb-6 p-5 bg-blue-50 border-2 border-blue-200 rounded-lg">
             <h3 className="font-semibold text-blue-900 mb-3 text-base">How to get your API key:</h3>
@@ -118,11 +183,20 @@ export default function SetupPage() {
           <div className="flex gap-3">
             <button
               onClick={handleSave}
-              disabled={isSaving || success || !apiKey.trim()}
+              disabled={isSaving || isRemoving || success || !apiKey.trim()}
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
             >
               {isSaving ? 'Saving...' : success ? 'Saved!' : 'Save API Key'}
             </button>
+            {apiKeyConfigured && (
+              <button
+                onClick={handleRemove}
+                disabled={isSaving || isRemoving || success}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                {isRemoving ? 'Removing...' : 'Remove Key'}
+              </button>
+            )}
             <Link
               href="/"
               className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-200 text-center"

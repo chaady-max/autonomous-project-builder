@@ -82,6 +82,17 @@ export const api = {
       }
       return res.json();
     },
+    removeApiKey: async () => {
+      const res = await fetch(`${API_URL}/api/settings/api-key`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to remove API key');
+      }
+      return res.json();
+    },
   },
   generate: {
     buildSpec: async (researchId: string) => {

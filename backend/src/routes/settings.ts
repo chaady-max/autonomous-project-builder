@@ -78,4 +78,42 @@ router.post('/api-key', async (req, res, next) => {
   }
 });
 
+/**
+ * DELETE /api/settings/api-key
+ * Remove API key (reset to placeholder)
+ */
+router.delete('/api-key', async (req, res, next) => {
+  try {
+    console.log('[Settings] Removing API key from .env file');
+
+    // Update .env file to placeholder
+    const envPath = path.join(__dirname, '../../.env');
+    let envContent = fs.readFileSync(envPath, 'utf-8');
+
+    // Replace the API key line with placeholder
+    const apiKeyRegex = /ANTHROPIC_API_KEY=.*/;
+    if (apiKeyRegex.test(envContent)) {
+      envContent = envContent.replace(apiKeyRegex, 'ANTHROPIC_API_KEY="sk-ant-api-key-placeholder"');
+    } else {
+      // Add placeholder if not present
+      envContent += '\nANTHROPIC_API_KEY="sk-ant-api-key-placeholder"\n';
+    }
+
+    fs.writeFileSync(envPath, envContent, 'utf-8');
+
+    // Update the process.env for current session
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-api-key-placeholder';
+
+    console.log('[Settings] API key removed successfully');
+
+    res.json({
+      success: true,
+      message: 'API key removed successfully',
+    });
+  } catch (error) {
+    console.error('[Settings] Error removing API key:', error);
+    next(error);
+  }
+});
+
 export default router;
