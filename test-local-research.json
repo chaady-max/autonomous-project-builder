@@ -1,0 +1,20 @@
+{
+  "summaryId": "6b5bea94-0c57-416e-8c00-bea767cc1c81",
+  "parsedData": {
+    "projectName": "TaskFlow SaaS",
+    "description": "Team task management with real-time collaboration",
+    "features": [
+      "User authentication",
+      "Task CRUD operations",
+      "Real-time updates",
+      "Team collaboration"
+    ],
+    "techStack": {
+      "backend": ["Node.js"],
+      "frontend": ["Next.js"],
+      "database": "PostgreSQL"
+    },
+    "timeline": "8 weeks",
+    "teamSize": "1-2 developers"
+  }
+}

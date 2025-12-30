@@ -1,0 +1,15 @@
+# Environment
+.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+
+# Build
+dist/
+node_modules/
+
+# Logs
+*.log

@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Autonomous Project Builder",
+  description: "AI-powered tool that transforms project ideas into working code",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className="antialiased min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        {children}
+      </body>
+    </html>
+  );
+}

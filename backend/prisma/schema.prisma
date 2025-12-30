@@ -1,0 +1,74 @@
+// Prisma schema for Autonomous Project Builder (SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Summary {
+  id            String   @id @default(uuid())
+  content       String
+  format        String   // "yaml" | "markdown" | "text"
+  parsedData    String   // JSON string
+  completeness  String   // JSON string
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  research ResearchResult?
+}
+
+model ResearchResult {
+  id                String   @id @default(uuid())
+  summaryId         String   @unique
+  summary           Summary  @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  requiredFeatures  String   // JSON string
+  techStack         String   // JSON string
+  architecture      String   // JSON string
+  complexity        String
+  timeline          String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  agents            Agent[]
+  tools             ToolRecommendation?
+}
+
+model Agent {
+  id                  String   @id @default(uuid())
+  researchId          String
+  research            ResearchResult @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  name                String
+  role                String
+  workloadPercentage  Int
+  responsibilities    String   // JSON string
+  systemPrompt        String
+  successCriteria     String   // JSON string
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ToolRecommendation {
+  id               String   @id @default(uuid())
+  researchId       String   @unique
+  research         ResearchResult @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  recommendations  String   // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model BuildSession {
+  id              String   @id @default(uuid())
+  summaryId       String
+  status          String   // "pending" | "in_progress" | "completed" | "failed"
+  progress        Int      @default(0) // 0-100
+  currentStep     String?
+  generatedFiles  String?  // JSON string
+  downloadUrl     String?
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

@@ -1,0 +1,13 @@
+project: Test Project
+description: A test project to verify upload functionality
+features:
+  - User authentication
+  - Data processing
+  - API endpoints
+techStack:
+  backend:
+    - Node.js
+    - Express
+  frontend:
+    - React
+  database: PostgreSQL

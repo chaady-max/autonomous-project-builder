@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Force light mode - remove dark mode conflicts */
+:root {
+  --foreground-rgb: 17, 24, 39; /* gray-900 */
+  --background-start-rgb: 239, 246, 255; /* blue-50 */
+  --background-end-rgb: 238, 242, 255; /* indigo-100 */
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  /* Background is now controlled by layout.tsx */
+}
+
+/* Ensure all text elements have proper contrast */
+* {
+  color: inherit;
+}
+
+/* Override any dark mode preferences */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 17, 24, 39; /* Keep light mode colors */
+    --background-start-rgb: 239, 246, 255;
+    --background-end-rgb: 238, 242, 255;
+  }
+}

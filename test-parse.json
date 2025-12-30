@@ -1,0 +1,4 @@
+{
+  "content": "PROJECT:\n  name: TaskFlow SaaS\n  description: Team task management with real-time collaboration\n  features:\n    - User authentication\n    - Task CRUD operations\n    - Real-time updates\n    - Team collaboration\n  tech_stack:\n    - Backend: Node.js\n    - Frontend: Next.js\n    - Database: PostgreSQL\n  timeline: 8 weeks\n  team_size: 1-2 developers",
+  "format": "yaml"
+}
