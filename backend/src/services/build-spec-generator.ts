@@ -73,7 +73,8 @@ export class BuildSpecGenerator {
     parsedData: ProjectSummary,
     researchResult: ResearchResult,
     agentTeam: AgentTeam,
-    tools: ToolRecommendations
+    tools: ToolRecommendations,
+    customInstructions: string = ''
   ): BuildSpecification {
     console.log('[BuildSpecGenerator] Creating build specification for:', parsedData.projectName);
 
@@ -99,7 +100,8 @@ export class BuildSpecGenerator {
       parsedData,
       researchResult,
       agentTeam,
-      tools
+      tools,
+      customInstructions
     });
 
     console.log('[BuildSpecGenerator] Build specification complete');
@@ -548,7 +550,7 @@ export class BuildSpecGenerator {
    * Generate complete build document (the key output!)
    */
   private generateCompleteBuildDocument(data: any): string {
-    const { projectOverview, technicalStack, setupInstructions, fileStructure, features, agentTasks, testingStrategy, deploymentGuide, parsedData, researchResult, agentTeam, tools } = data;
+    const { projectOverview, technicalStack, setupInstructions, fileStructure, features, agentTasks, testingStrategy, deploymentGuide, parsedData, researchResult, agentTeam, tools, customInstructions } = data;
 
     return `# ${projectOverview.name} - Complete Build Specification
 
@@ -816,6 +818,14 @@ ${deploymentGuide.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 - Deploy without proper testing
 - Hard-code sensitive values (use environment variables)
 
+${customInstructions ? `
+---
+
+## Custom Instructions
+
+${customInstructions}
+
+` : ''}
 ---
 
 **END OF BUILD SPECIFICATION**

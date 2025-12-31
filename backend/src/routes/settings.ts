@@ -1,8 +1,10 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 /**
  * GET /api/settings/status
@@ -112,6 +114,129 @@ router.delete('/api-key', async (req, res, next) => {
     });
   } catch (error) {
     console.error('[Settings] Error removing API key:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/settings/test-api
+ * Test API key with a simple prompt
+ */
+router.post('/test-api', async (req, res, next) => {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey || apiKey === 'sk-ant-api-key-placeholder' || !apiKey.startsWith('sk-ant-')) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid API key configured',
+      });
+    }
+
+    console.log('[Settings] Testing API key with simple prompt');
+
+    // Import Anthropic client
+    const Anthropic = require('@anthropic-ai/sdk');
+    const anthropic = new Anthropic({ apiKey });
+
+    // Simple math test
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 100,
+      messages: [{
+        role: 'user',
+        content: 'What is 4 + 5? Reply with only the number.',
+      }],
+    });
+
+    const answer = response.content[0].text.trim();
+    const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
+
+    // Calculate approximate cost (Sonnet 4: $3/MTok input, $15/MTok output)
+    const inputCost = (response.usage.input_tokens / 1_000_000) * 3;
+    const outputCost = (response.usage.output_tokens / 1_000_000) * 15;
+    const totalCost = inputCost + outputCost;
+
+    console.log('[Settings] API test successful:', { answer, tokensUsed, cost: totalCost });
+
+    res.json({
+      success: true,
+      answer,
+      tokensUsed,
+      cost: totalCost.toFixed(6),
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+    });
+  } catch (error: any) {
+    console.error('[Settings] Error testing API:', error);
+
+    // Check for specific API errors
+    if (error.status === 401) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid API key. Please check your key and try again.',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to test API',
+    });
+  }
+});
+
+/**
+ * GET /api/settings/custom-instructions
+ * Get custom instructions
+ */
+router.get('/custom-instructions', async (req, res, next) => {
+  try {
+    const setting = await prisma.settings.findUnique({
+      where: { key: 'custom_instructions' },
+    });
+
+    res.json({
+      success: true,
+      instructions: setting?.value || '',
+    });
+  } catch (error) {
+    console.error('[Settings] Error getting custom instructions:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/settings/custom-instructions
+ * Save custom instructions
+ */
+router.post('/custom-instructions', async (req, res, next) => {
+  try {
+    const { instructions } = req.body;
+
+    if (typeof instructions !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Instructions must be a string',
+      });
+    }
+
+    console.log('[Settings] Saving custom instructions');
+
+    // Upsert the custom instructions
+    await prisma.settings.upsert({
+      where: { key: 'custom_instructions' },
+      update: { value: instructions },
+      create: { key: 'custom_instructions', value: instructions },
+    });
+
+    console.log('[Settings] Custom instructions saved successfully');
+
+    res.json({
+      success: true,
+      message: 'Custom instructions saved successfully',
+    });
+  } catch (error) {
+    console.error('[Settings] Error saving custom instructions:', error);
     next(error);
   }
 });

@@ -16,8 +16,13 @@ export default function SetupPage() {
   const [success, setSuccess] = useState(false);
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [isSavingInstructions, setIsSavingInstructions] = useState(false);
+  const [instructionsSaved, setInstructionsSaved] = useState(false);
 
-  // Check API key status on mount
+  // Check API key status and load custom instructions on mount
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -30,8 +35,18 @@ export default function SetupPage() {
       }
     };
 
+    const loadCustomInstructions = async () => {
+      try {
+        const result = await api.settings.getCustomInstructions();
+        setCustomInstructions(result.instructions || '');
+      } catch (err) {
+        console.error('Failed to load custom instructions:', err);
+      }
+    };
+
     if (isAuthenticated && !isLoading) {
       checkStatus();
+      loadCustomInstructions();
     } else if (!isLoading) {
       setIsCheckingStatus(false);
     }
@@ -102,6 +117,37 @@ export default function SetupPage() {
     }
   };
 
+  const handleTestApi = async () => {
+    setIsTesting(true);
+    setError(null);
+    setTestResult(null);
+
+    try {
+      const result = await api.settings.testApi();
+      setTestResult(result);
+    } catch (err: any) {
+      setError(err.message || 'Failed to test API');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSaveInstructions = async () => {
+    setIsSavingInstructions(true);
+    setError(null);
+    setInstructionsSaved(false);
+
+    try {
+      await api.settings.saveCustomInstructions(customInstructions);
+      setInstructionsSaved(true);
+      setTimeout(() => setInstructionsSaved(false), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save custom instructions');
+    } finally {
+      setIsSavingInstructions(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -168,6 +214,51 @@ export default function SetupPage() {
             </p>
           </div>
 
+          {/* Test API Section */}
+          {apiKeyConfigured && (
+            <div className="mb-6 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">Test Your API Key</h3>
+                <button
+                  onClick={handleTestApi}
+                  disabled={isTesting || isSaving || isRemoving}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 text-sm"
+                >
+                  {isTesting ? 'Testing...' : 'Test API'}
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Test your API connection by asking Claude to solve: <strong>4 + 5 = ?</strong>
+              </p>
+
+              {testResult && (
+                <div className="bg-white border border-gray-300 rounded-md p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">Answer:</p>
+                      <p className="font-semibold text-gray-900 text-lg">{testResult.answer}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Tokens Used:</p>
+                      <p className="font-semibold text-gray-900">{testResult.tokensUsed}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Cost:</p>
+                      <p className="font-semibold text-green-700">${testResult.cost}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Status:</p>
+                      <p className="font-semibold text-green-700">✅ Success</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
+                    <p>Input tokens: {testResult.inputTokens} | Output tokens: {testResult.outputTokens}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-lg p-4">
@@ -206,6 +297,35 @@ export default function SetupPage() {
             >
               Cancel
             </Link>
+          </div>
+        </div>
+
+        {/* Custom Instructions Card */}
+        <div className="mt-6 p-5 bg-white rounded-lg shadow-md border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-3 text-lg">Custom Build Instructions</h3>
+          <p className="text-sm text-gray-700 mb-3">
+            Add custom instructions that will be included in all generated build specifications. For example: "Always add version numbers", "Use semantic commit messages", etc.
+          </p>
+          <textarea
+            value={customInstructions}
+            onChange={(e) => setCustomInstructions(e.target.value)}
+            placeholder="Example: Always add version numbers to the header&#10;Example: Use ESLint with strict TypeScript rules&#10;Example: Include comprehensive error logging"
+            rows={6}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition mb-3"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={handleSaveInstructions}
+              disabled={isSavingInstructions}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 text-sm"
+            >
+              {isSavingInstructions ? 'Saving...' : 'Save Instructions'}
+            </button>
+            {instructionsSaved && (
+              <span className="flex items-center text-green-700 font-medium text-sm">
+                ✓ Saved successfully!
+              </span>
+            )}
           </div>
         </div>
 

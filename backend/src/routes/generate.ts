@@ -57,12 +57,19 @@ router.post('/build-spec', async (req, res, next) => {
     console.log('[Generate] Generating tool recommendations...');
     const tools = toolRecommender.recommendTools(parsedData, researchResult);
 
+    console.log('[Generate] Fetching custom instructions...');
+    const customInstructionsSetting = await prisma.settings.findUnique({
+      where: { key: 'custom_instructions' },
+    });
+    const customInstructions = customInstructionsSetting?.value || '';
+
     console.log('[Generate] Generating complete build specification...');
     const buildSpec = buildSpecGenerator.generateBuildSpec(
       parsedData,
       researchResult,
       agentTeam,
-      tools
+      tools,
+      customInstructions
     );
 
     // Store build spec in database (optional - for now just return it)

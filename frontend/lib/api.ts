@@ -93,6 +93,37 @@ export const api = {
       }
       return res.json();
     },
+    testApi: async () => {
+      const res = await fetch(`${API_URL}/api/settings/test-api`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to test API');
+      }
+      return res.json();
+    },
+    getCustomInstructions: async () => {
+      const res = await fetch(`${API_URL}/api/settings/custom-instructions`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to get custom instructions');
+      }
+      return res.json();
+    },
+    saveCustomInstructions: async (instructions: string) => {
+      const res = await fetch(`${API_URL}/api/settings/custom-instructions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructions })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to save custom instructions');
+      }
+      return res.json();
+    },
   },
   generate: {
     buildSpec: async (researchId: string) => {

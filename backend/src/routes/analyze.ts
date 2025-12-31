@@ -7,7 +7,6 @@ import { ParseSummaryResponseSchema } from '../../../shared/types/project';
 const router = express.Router();
 const prisma = new PrismaClient();
 const parser = new ProjectSummaryParser();
-const researcher = new AIResearcher();
 
 /**
  * POST /api/analyze/summary
@@ -113,6 +112,9 @@ router.post('/research', async (req, res, next) => {
     }
 
     console.log(`[Research] Starting AI analysis for summary ${summaryId}`);
+
+    // Create fresh researcher instance to check current API key
+    const researcher = new AIResearcher();
 
     // Call Claude API to analyze the project
     const researchResult = await researcher.analyzeProject(parsedData);

@@ -1,0 +1,4 @@
+{
+  "content": "PROJECT:\n  name: Test App\n  description: A test application\n  features:\n    - Feature 1\n    - Feature 2\n  tech_stack:\n    - Backend: Node.js\n    - Frontend: React",
+  "format": "yaml"
+}

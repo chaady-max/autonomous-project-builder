@@ -16,6 +16,7 @@ export default function UploadForm() {
   const [error, setError] = useState<string | null>(null);
   const [analysisStep, setAnalysisStep] = useState<'idle' | 'parsing' | 'researching' | 'generating' | 'complete'>('idle');
   const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean | null>(null);
+  const [showResearchDetails, setShowResearchDetails] = useState(false);
 
   // Check API key status on mount
   useEffect(() => {
@@ -133,7 +134,7 @@ export default function UploadForm() {
               Autonomous Project Builder
             </h1>
             <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              v0.5
+              v0.6
             </span>
           </div>
           <p className="text-lg text-gray-600">
@@ -260,6 +261,46 @@ export default function UploadForm() {
           </div>
         )}
 
+        {/* Progress Bar */}
+        {isAnalyzing && (
+          <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-blue-900">
+                {analysisStep === 'parsing' && '🔍 Parsing summary...'}
+                {analysisStep === 'researching' && '🤖 AI researching requirements...'}
+                {analysisStep === 'generating' && '⚙️ Generating build specification...'}
+              </span>
+              <span className="text-sm text-blue-700">
+                {analysisStep === 'parsing' && '33%'}
+                {analysisStep === 'researching' && '66%'}
+                {analysisStep === 'generating' && '99%'}
+              </span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: analysisStep === 'parsing' ? '33%' : analysisStep === 'researching' ? '66%' : analysisStep === 'generating' ? '99%' : '0%'
+                }}
+              ></div>
+            </div>
+          </div>
+        )}
+
+        {isGenerating && !isAnalyzing && (
+          <div className="mb-6 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-purple-900">
+                ⚙️ Generating build specification...
+              </span>
+              <span className="text-sm text-purple-700">Processing...</span>
+            </div>
+            <div className="w-full bg-purple-200 rounded-full h-3 overflow-hidden">
+              <div className="bg-purple-600 h-3 rounded-full animate-pulse w-full"></div>
+            </div>
+          </div>
+        )}
+
         {/* Analyze Button */}
         <button
           onClick={handleAnalyze}
@@ -337,10 +378,41 @@ export default function UploadForm() {
         {/* AI Research Results */}
         {researchResult && (
           <div className="mt-6 p-6 bg-purple-50 border-2 border-purple-300 rounded-lg shadow-md">
-            <h3 className="font-bold text-xl mb-4 text-purple-900">🤖 AI Research Results</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-xl text-purple-900">🤖 AI Research Results</h3>
+              <button
+                onClick={() => setShowResearchDetails(!showResearchDetails)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md font-medium hover:bg-purple-700 transition-all duration-200 text-sm"
+              >
+                {showResearchDetails ? '▲ Hide Details' : '▼ Show Details'}
+              </button>
+            </div>
 
-            {/* Required Features */}
-            <div className="mb-6">
+            {/* Summary (always visible) */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <p className="text-xs text-gray-600 font-medium mb-1">Features</p>
+                <p className="font-semibold text-2xl text-gray-900">{researchResult.data.requiredFeatures?.length || 0}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <p className="text-xs text-gray-600 font-medium mb-1">Estimated Complexity</p>
+                <p className="font-semibold text-xl text-gray-900 capitalize">{researchResult.data.estimatedComplexity}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <p className="text-xs text-gray-600 font-medium mb-1">Tech Stack</p>
+                <p className="text-sm text-gray-900">{researchResult.data.recommendedTechStack?.backend?.framework}, {researchResult.data.recommendedTechStack?.frontend?.framework}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <p className="text-xs text-gray-600 font-medium mb-1">Estimated Timeline</p>
+                <p className="font-semibold text-xl text-gray-900">{researchResult.data.estimatedTimeline}</p>
+              </div>
+            </div>
+
+            {/* Detailed view (collapsible) */}
+            {showResearchDetails && (
+              <>
+                {/* Required Features */}
+                <div className="mb-6">
               <p className="text-sm font-semibold text-gray-900 mb-3">Required Features ({researchResult.data.requiredFeatures?.length || 0}):</p>
               <div className="space-y-3">
                 {researchResult.data.requiredFeatures?.map((feature: any, i: number) => (
@@ -409,9 +481,11 @@ export default function UploadForm() {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-purple-300">
-              <p className="text-xs text-gray-600">Research ID: {researchResult.researchId}</p>
-            </div>
+                <div className="mt-4 pt-4 border-t border-purple-300">
+                  <p className="text-xs text-gray-600">Research ID: {researchResult.researchId}</p>
+                </div>
+              </>
+            )}
 
             {/* Generate Build Spec Button */}
             {!buildSpec && (
