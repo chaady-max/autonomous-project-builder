@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import ClarificationModal from './ClarificationModal';
+import PlanningDetailsPanel from './PlanningDetailsPanel';
 
 export default function UploadForm() {
   const [projectSummary, setProjectSummary] = useState('');
@@ -14,9 +16,14 @@ export default function UploadForm() {
   const [buildSpec, setBuildSpec] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysisStep, setAnalysisStep] = useState<'idle' | 'parsing' | 'researching' | 'generating' | 'complete'>('idle');
+  const [analysisStep, setAnalysisStep] = useState<'idle' | 'parsing' | 'researching' | 'clarifying' | 'generating' | 'complete'>('idle');
   const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean | null>(null);
   const [showResearchDetails, setShowResearchDetails] = useState(false);
+
+  // v0.7: Clarification flow state
+  const [clarificationQuestions, setClarificationQuestions] = useState<string[]>([]);
+  const [showClarificationModal, setShowClarificationModal] = useState(false);
+  const [clarificationAnswered, setClarificationAnswered] = useState(false);
 
   // Check API key status on mount
   useEffect(() => {
@@ -82,6 +89,8 @@ export default function UploadForm() {
     setError(null);
     setResult(null);
     setResearchResult(null);
+    setClarificationQuestions([]);
+    setClarificationAnswered(false);
 
     try {
       // Step 1: Parse the summary
@@ -94,12 +103,28 @@ export default function UploadForm() {
       const researchResponse = await api.analyze.research(parseResponse.summaryId, parseResponse.data);
       setResearchResult(researchResponse);
 
+      // Step 3: v0.7 - Generate clarification questions
+      setAnalysisStep('clarifying');
+      const clarifyResponse = await api.analyze.clarify(researchResponse.researchId);
+      setClarificationQuestions(clarifyResponse.questions);
+      setShowClarificationModal(true);
+
       setAnalysisStep('complete');
     } catch (err: any) {
       setError(err.message || 'Failed to analyze project');
       setAnalysisStep('idle');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleClarificationSubmit = async (answers: { question: string; answer: string; skipped?: boolean }[]) => {
+    try {
+      setShowClarificationModal(false);
+      await api.analyze.clarifyAnswers(researchResult.researchId, answers);
+      setClarificationAnswered(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save clarification answers');
     }
   };
 
@@ -134,7 +159,7 @@ export default function UploadForm() {
               Autonomous Project Builder
             </h1>
             <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              v0.6
+              v0.7
             </span>
           </div>
           <p className="text-lg text-gray-600">
@@ -268,11 +293,13 @@ export default function UploadForm() {
               <span className="text-sm font-semibold text-blue-900">
                 {analysisStep === 'parsing' && '🔍 Parsing summary...'}
                 {analysisStep === 'researching' && '🤖 AI researching requirements...'}
+                {analysisStep === 'clarifying' && '❓ Generating clarification questions...'}
                 {analysisStep === 'generating' && '⚙️ Generating build specification...'}
               </span>
               <span className="text-sm text-blue-700">
-                {analysisStep === 'parsing' && '33%'}
-                {analysisStep === 'researching' && '66%'}
+                {analysisStep === 'parsing' && '25%'}
+                {analysisStep === 'researching' && '50%'}
+                {analysisStep === 'clarifying' && '75%'}
                 {analysisStep === 'generating' && '99%'}
               </span>
             </div>
@@ -280,7 +307,7 @@ export default function UploadForm() {
               <div
                 className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
                 style={{
-                  width: analysisStep === 'parsing' ? '33%' : analysisStep === 'researching' ? '66%' : analysisStep === 'generating' ? '99%' : '0%'
+                  width: analysisStep === 'parsing' ? '25%' : analysisStep === 'researching' ? '50%' : analysisStep === 'clarifying' ? '75%' : analysisStep === 'generating' ? '99%' : '0%'
                 }}
               ></div>
             </div>
@@ -492,14 +519,19 @@ export default function UploadForm() {
               <div className="mt-6 pt-4 border-t border-purple-300">
                 <button
                   onClick={handleGenerateBuildSpec}
-                  disabled={isGenerating}
+                  disabled={isGenerating || !clarificationAnswered}
                   className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   {isGenerating ? '⚙️ Generating Build Specification...' : '🚀 Generate Complete Build Specification →'}
                 </button>
                 <p className="text-xs text-gray-600 mt-2 text-center">
-                  Creates: Agent team, tool recommendations, and complete build document
+                  Creates: Agent team, tool recommendations, and complete build document with planning intelligence
                 </p>
+                {!clarificationAnswered && researchResult && (
+                  <p className="text-xs text-amber-600 mt-2 text-center font-medium">
+                    ⏳ Please answer clarification questions first
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -621,9 +653,31 @@ export default function UploadForm() {
                 </p>
               </div>
             </div>
+
+            {/* v0.7: Planning Intelligence Panel */}
+            {buildSpec.planningDetails && (
+              <PlanningDetailsPanel
+                adrs={buildSpec.planningDetails.adrs}
+                diagrams={buildSpec.planningDetails.diagrams}
+                costEstimate={buildSpec.planningDetails.costEstimate}
+                dependencyRisks={buildSpec.planningDetails.dependencyRisks}
+              />
+            )}
           </div>
         )}
       </div>
+
+      {/* v0.7: Clarification Modal */}
+      {showClarificationModal && clarificationQuestions.length > 0 && (
+        <ClarificationModal
+          questions={clarificationQuestions}
+          onSubmit={handleClarificationSubmit}
+          onClose={() => {
+            setShowClarificationModal(false);
+            setClarificationAnswered(true);
+          }}
+        />
+      )}
     </div>
   );
 }

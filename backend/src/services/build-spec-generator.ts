@@ -1,4 +1,4 @@
-import { ProjectSummary, ResearchResult } from '../../../shared/types/project';
+import { ProjectSummary, ResearchResult, ADR, CostEstimate, DependencyRisk } from '../../../shared/types/project';
 import { AgentTeam } from './agent-factory';
 import { ToolRecommendations } from './tool-recommender';
 
@@ -67,14 +67,20 @@ interface DeploymentInstructions {
  */
 export class BuildSpecGenerator {
   /**
-   * Generate complete build specification
+   * Generate complete build specification (v0.7: with planning intelligence)
    */
   generateBuildSpec(
     parsedData: ProjectSummary,
     researchResult: ResearchResult,
     agentTeam: AgentTeam,
     tools: ToolRecommendations,
-    customInstructions: string = ''
+    customInstructions: string = '',
+    planningDetails?: {
+      adrs: ADR[];
+      diagrams: { c4Context?: string; c4Container?: string; erDiagram?: string; sequenceDiagrams?: string[] };
+      costEstimate: CostEstimate;
+      dependencyRisks: DependencyRisk[];
+    }
   ): BuildSpecification {
     console.log('[BuildSpecGenerator] Creating build specification for:', parsedData.projectName);
 
@@ -101,7 +107,8 @@ export class BuildSpecGenerator {
       researchResult,
       agentTeam,
       tools,
-      customInstructions
+      customInstructions,
+      planningDetails
     });
 
     console.log('[BuildSpecGenerator] Build specification complete');
@@ -550,7 +557,7 @@ export class BuildSpecGenerator {
    * Generate complete build document (the key output!)
    */
   private generateCompleteBuildDocument(data: any): string {
-    const { projectOverview, technicalStack, setupInstructions, fileStructure, features, agentTasks, testingStrategy, deploymentGuide, parsedData, researchResult, agentTeam, tools, customInstructions } = data;
+    const { projectOverview, technicalStack, setupInstructions, fileStructure, features, agentTasks, testingStrategy, deploymentGuide, parsedData, researchResult, agentTeam, tools, customInstructions, planningDetails } = data;
 
     return `# ${projectOverview.name} - Complete Build Specification
 
@@ -818,6 +825,134 @@ ${deploymentGuide.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 - Deploy without proper testing
 - Hard-code sensitive values (use environment variables)
 
+${planningDetails ? `
+---
+
+## Architecture Decision Records (ADRs)
+
+${planningDetails.adrs.map(adr => `
+### ADR ${adr.id}: ${adr.title}
+
+**Status:** ${adr.status}${adr.dateCreated ? ` | **Date:** ${adr.dateCreated}` : ''}
+
+#### Context
+
+${adr.context}
+
+#### Decision
+
+${adr.decision}
+
+#### Consequences
+
+${adr.consequences.map(c => `- ${c}`).join('\n')}
+
+${adr.alternatives && adr.alternatives.length > 0 ? `
+#### Alternatives Considered
+
+${adr.alternatives.map(alt => `
+**${alt.name}:**
+- Pros: ${alt.pros.join(', ')}
+- Cons: ${alt.cons.join(', ')}
+`).join('\n')}
+` : ''}
+`).join('\n---\n')}
+
+---
+
+## System Architecture Diagrams
+
+${planningDetails.diagrams.c4Context ? `
+### C4 Context Diagram
+
+\`\`\`mermaid
+${planningDetails.diagrams.c4Context}
+\`\`\`
+` : ''}
+
+${planningDetails.diagrams.c4Container ? `
+### C4 Container Diagram
+
+\`\`\`mermaid
+${planningDetails.diagrams.c4Container}
+\`\`\`
+` : ''}
+
+${planningDetails.diagrams.erDiagram ? `
+### Database Schema (ER Diagram)
+
+\`\`\`mermaid
+${planningDetails.diagrams.erDiagram}
+\`\`\`
+` : ''}
+
+${planningDetails.diagrams.sequenceDiagrams && planningDetails.diagrams.sequenceDiagrams.length > 0 ? `
+### Sequence Diagrams
+
+${planningDetails.diagrams.sequenceDiagrams.map((diagram, index) => `
+#### Flow ${index + 1}
+
+\`\`\`mermaid
+${diagram}
+\`\`\`
+`).join('\n')}
+` : ''}
+
+---
+
+## Cost Estimation
+
+**Confidence Level:** ${planningDetails.costEstimate.confidence.toUpperCase()}
+
+### Infrastructure Costs
+
+**Total Monthly:** $${planningDetails.costEstimate.totalMonthly.toFixed(2)}
+**Total Annual:** $${planningDetails.costEstimate.totalAnnual.toFixed(2)}
+
+| Service | Category | Monthly | Tier | Assumptions |
+|---------|----------|---------|------|-------------|
+${planningDetails.costEstimate.items.map(item =>
+  `| ${item.service} | ${item.category} | $${item.monthlyEstimate.toFixed(2)} | ${item.tier} | ${item.assumptions[0] || 'N/A'} |`
+).join('\n')}
+
+${planningDetails.costEstimate.developmentCost ? `
+### Development Costs
+
+- **Total Hours:** ${planningDetails.costEstimate.developmentCost.totalHours}h
+- **Hourly Rate Range:** $${planningDetails.costEstimate.developmentCost.hourlyRateMin}-${planningDetails.costEstimate.developmentCost.hourlyRateMax}/hr
+- **Estimated Cost:** $${planningDetails.costEstimate.developmentCost.totalMin.toLocaleString()}-$${planningDetails.costEstimate.developmentCost.totalMax.toLocaleString()}
+` : ''}
+
+${planningDetails.costEstimate.notes && planningDetails.costEstimate.notes.length > 0 ? `
+**Notes:**
+${planningDetails.costEstimate.notes.map(note => `- ${note}`).join('\n')}
+` : ''}
+
+---
+
+## Dependency Risk Analysis
+
+${planningDetails.dependencyRisks.length > 0 ? `
+${planningDetails.dependencyRisks.map(risk => `
+### ${risk.packageName}${risk.version ? ` (${risk.version})` : ''}
+
+**Risk Level:** ${risk.riskLevel.toUpperCase()} ${risk.riskLevel === 'critical' ? '🔴' : risk.riskLevel === 'high' ? '🟠' : risk.riskLevel === 'medium' ? '🟡' : '🟢'}
+**Category:** ${risk.category || 'general'}
+
+**Risk Factors:**
+${risk.riskFactors.map(f => `- ${f}`).join('\n')}
+
+**Mitigation Strategy:**
+${risk.mitigation}
+
+${risk.alternatives && risk.alternatives.length > 0 ? `
+**Alternatives:** ${risk.alternatives.join(', ')}
+` : ''}
+`).join('\n---\n')}
+` : 'No significant dependency risks identified.'}
+
+` : ''}
+
 ${customInstructions ? `
 ---
 
@@ -830,7 +965,7 @@ ${customInstructions}
 
 **END OF BUILD SPECIFICATION**
 
-Generated by Autonomous Project Builder v0.2.0
+Generated by Autonomous Project Builder v0.7.0
 `;
   }
 }

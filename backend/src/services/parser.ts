@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 import { marked } from 'marked';
-import { ProjectSummary, Completeness } from '../../../shared/types/project';
+import { ProjectSummary, Completeness, InputEnrichment } from '../../../shared/types/project';
 
 export class ProjectSummaryParser {
   /**
@@ -43,6 +43,107 @@ export class ProjectSummaryParser {
       }
       throw error;
     }
+  }
+
+  /**
+   * Parse with enrichment data and optional strict mode validation (v0.7)
+   */
+  async parseWithEnrichment(
+    content: string,
+    format: 'yaml' | 'markdown' | 'text',
+    enrichment?: InputEnrichment,
+    strictMode: boolean = false
+  ): Promise<{
+    data: ProjectSummary;
+    completeness: Completeness;
+    enrichment?: InputEnrichment;
+    strictModeErrors?: string[];
+  }> {
+    // First do normal parsing
+    const { data, completeness } = await this.parse(content, format);
+
+    // If strict mode, validate requirements
+    if (strictMode) {
+      const errors = this.validateStrictMode(data, enrichment);
+      if (errors.length > 0) {
+        return {
+          data,
+          completeness,
+          enrichment,
+          strictModeErrors: errors,
+        };
+      }
+    }
+
+    return {
+      data,
+      completeness,
+      enrichment,
+    };
+  }
+
+  /**
+   * Validate strict mode requirements (v0.7)
+   */
+  private validateStrictMode(data: ProjectSummary, enrichment?: InputEnrichment): string[] {
+    const errors: string[] = [];
+
+    // Required: Project name must be meaningful
+    if (!data.projectName || data.projectName === 'Untitled Project' || data.projectName.length < 3) {
+      errors.push('Project name is required and must be at least 3 characters');
+    }
+
+    // Required: Description must be present
+    if (!data.description || data.description === 'No description provided' || data.description.length < 10) {
+      errors.push('Project description is required and must be at least 10 characters');
+    }
+
+    // Required: At least 3 features
+    if (!data.features || data.features.length < 3) {
+      errors.push('At least 3 features are required in strict mode');
+    }
+
+    // Required: Backend tech stack
+    if (!data.techStack?.backend || data.techStack.backend.length === 0) {
+      errors.push('Backend technology stack is required');
+    }
+
+    // Required: Frontend tech stack
+    if (!data.techStack?.frontend || data.techStack.frontend.length === 0) {
+      errors.push('Frontend technology stack is required');
+    }
+
+    // Required: Database specification
+    if (!data.techStack?.database) {
+      errors.push('Database technology is required');
+    }
+
+    // Enrichment validations (if enrichment is expected in strict mode)
+    if (enrichment) {
+      // Feature prioritization recommended for projects with many features
+      if (data.features && data.features.length > 5 && !enrichment.featurePriorities?.length) {
+        errors.push('Feature prioritization is recommended for projects with more than 5 features');
+      }
+
+      // Security requirements if authentication mentioned
+      const hasAuth = data.features?.some(f =>
+        f.toLowerCase().includes('auth') ||
+        f.toLowerCase().includes('login') ||
+        f.toLowerCase().includes('user')
+      );
+      if (hasAuth && !enrichment.nfrSecurity) {
+        errors.push('Security requirements are required when authentication features are present');
+      }
+
+      // Scalability info for larger projects
+      if (data.teamSize && (data.teamSize.includes('large') || data.teamSize.includes('enterprise'))) {
+        if (!enrichment.nfrScalability) {
+          errors.push('Scalability requirements are required for large or enterprise projects');
+        }
+      }
+    }
+
+    return errors;
   }
 
   /**

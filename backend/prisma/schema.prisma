@@ -15,26 +15,31 @@ model Summary {
   format        String   // "yaml" | "markdown" | "text"
   parsedData    String   // JSON string
   completeness  String   // JSON string
+  strictMode    Boolean  @default(false)  // NEW: Track if strict mode was used
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  research ResearchResult?
+  research    ResearchResult?
+  enrichment  InputEnrichment?  // NEW: Link to enrichment data
 }
 
 model ResearchResult {
-  id                String   @id @default(uuid())
-  summaryId         String   @unique
-  summary           Summary  @relation(fields: [summaryId], references: [id], onDelete: Cascade)
-  requiredFeatures  String   // JSON string
-  techStack         String   // JSON string
-  architecture      String   // JSON string
-  complexity        String
-  timeline          String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  summaryId          String   @unique
+  summary            Summary  @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  requiredFeatures   String   // JSON string
+  techStack          String   // JSON string
+  architecture       String   // JSON string
+  complexity         String
+  timeline           String
+  clarificationAsked Boolean  @default(false)  // NEW: Track if clarification questions were asked
+  clarificationQA    String?  // NEW: JSON string of Q&A pairs
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  agents            Agent[]
-  tools             ToolRecommendation?
+  agents             Agent[]
+  tools              ToolRecommendation?
+  planningDetails    PlanningDetails?  // NEW: Link to planning intelligence
 }
 
 model Agent {
@@ -71,6 +76,61 @@ model BuildSession {
   errorMessage    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model InputEnrichment {
+  id                    String   @id @default(uuid())
+  summaryId             String   @unique
+  summary               Summary  @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+
+  // Feature prioritization
+  featurePriorities     String?  // JSON: [{feature: string, priority: "must"|"should"|"nice"}]
+
+  // Non-functional requirements
+  nfrPerformance        String?  // JSON: {responseTime, throughput, concurrentUsers}
+  nfrSecurity           String?  // JSON: {auth, encryption, compliance}
+  nfrScalability        String?  // JSON: {expectedUsers, growthRate}
+  nfrAccessibility      String?  // JSON: {wcagLevel, requirements}
+
+  // User personas
+  personas              String?  // JSON: [{name, role, goals, painPoints}]
+
+  // Project preferences
+  approachPreference    String?  // "api-first"|"ui-first"|"balanced"
+  budgetConstraint      String?  // "low"|"medium"|"high"|"unlimited"
+  complexitySlider      Int?     // 1-10
+  scalabilityTier       String?  // "small"|"medium"|"large"|"enterprise"
+  architectureStyle     String?  // "monolith"|"modular"|"microservices"|"auto"
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model PlanningDetails {
+  id                    String   @id @default(uuid())
+  researchId            String   @unique
+  research              ResearchResult @relation(fields: [researchId], references: [id], onDelete: Cascade)
+
+  // Architecture Decision Records
+  adrs                  String   // JSON: Array of ADR objects
+
+  // System diagrams (Mermaid.js)
+  c4ContextDiagram      String?  // Mermaid.js string
+  c4ContainerDiagram    String?  // Mermaid.js string
+  erDiagram             String?  // Mermaid.js string
+  sequenceDiagrams      String?  // JSON: Array of Mermaid strings
+
+  // Cost estimation
+  costEstimate          String   // JSON: Detailed breakdown
+
+  // Tech stack justification
+  techJustification     String   // JSON: Per-tech reasoning
+
+  // Dependency risk analysis
+  dependencyRisks       String   // JSON: Risk assessments
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Settings {

@@ -36,11 +36,11 @@ export const api = {
     }
   },
   analyze: {
-    summary: async (content: string, format: 'yaml' | 'markdown' | 'text') => {
+    summary: async (content: string, format: 'yaml' | 'markdown' | 'text', enrichment?: any, strictMode?: boolean) => {
       const res = await fetch(`${API_URL}/api/analyze/summary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, format })
+        body: JSON.stringify({ content, format, enrichment, strictMode })
       });
       if (!res.ok) {
         const error = await res.json();
@@ -57,6 +57,30 @@ export const api = {
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'Failed to run AI research');
+      }
+      return res.json();
+    },
+    clarify: async (researchId: string) => {
+      const res = await fetch(`${API_URL}/api/analyze/clarify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ researchId })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to generate clarification questions');
+      }
+      return res.json();
+    },
+    clarifyAnswers: async (researchId: string, answers: { question: string; answer: string; skipped?: boolean }[]) => {
+      const res = await fetch(`${API_URL}/api/analyze/clarify-answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ researchId, answers })
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to save clarification answers');
       }
       return res.json();
     },
