@@ -84,7 +84,7 @@ export default function SetupPage() {
       setSuccess(true);
       setApiKeyConfigured(true);
 
-      // Redirect to home after 2 seconds
+      // Redirect to home/landing page after 2 seconds
       setTimeout(() => {
         router.push('/');
       }, 2000);

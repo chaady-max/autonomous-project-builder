@@ -1,6 +1,6 @@
 {
   "name": "autonomous-project-builder",
-  "version": "0.3.0",
+  "version": "0.8.1",
   "description": "AI-powered tool that transforms project ideas into complete, working repositories",
   "private": true,
   "workspaces": [

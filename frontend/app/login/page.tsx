@@ -48,7 +48,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Autonomous Project Builder
           </h1>
-          <p className="text-sm text-gray-600">v0.4</p>
+          <p className="text-sm text-gray-600">v0.8.1</p>
           <p className="text-gray-600 mt-4">Enter password to continue</p>
         </div>
 
