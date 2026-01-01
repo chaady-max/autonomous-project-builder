@@ -6,6 +6,7 @@ import generateRoutes from './routes/generate';
 import recommendRoutes from './routes/recommend';
 import settingsRoutes from './routes/settings';
 import authRoutes from './routes/auth';
+import wizardRoutes from './routes/v0.8/wizard';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/generate', generateRoutes);
 app.use('/api/recommend', recommendRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/wizard', wizardRoutes); // v0.8 wizard-based flow
 
 // 404 handler
 app.use((req, res) => {

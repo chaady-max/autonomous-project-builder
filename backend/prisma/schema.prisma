@@ -140,3 +140,138 @@ model Settings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ============================================
+// v0.8 WIZARD-BASED MODELS
+// Decision-complete specification system
+// ============================================
+
+model WizardSession {
+  id                String   @id @default(uuid())
+  userId            String?  // null for anonymous sessions
+  status            String   // "draft" | "completed" | "generating"
+  currentStep       Int      @default(1)
+  completenessScore Float    @default(0.0)
+
+  // Step 1: Project Basics
+  projectName       String?
+  projectType       String?  // "saas" | "marketplace" | "dashboard" | etc
+  description       String?
+  timeline          String?
+  teamSize          String?
+  budgetTier        String?  // "low" | "medium" | "high" | "enterprise"
+
+  // Step 2: Non-Negotiables (stored as JSON)
+  nonNegotiables    String?  // JSON: {e2ee: boolean, adminRead: boolean, ...}
+
+  // Step 3: Personas & Use Cases
+  personas          String?  // JSON: [{name, role, goals, techSkill, frequency}]
+
+  // Step 4: Features & Scope
+  features          String?  // JSON: [{name, scope: "mvp"|"post-mvp"|"nice", priority: number}]
+  inScope           String?  // JSON: string[]
+  outOfScope        String?  // JSON: string[]
+
+  // Step 5: User Flows (optional)
+  userFlows         String?  // JSON: [{name, steps: [{action, actor, system_response}]}]
+
+  // Step 6: Technical Requirements
+  techStack         String?  // JSON: {backend, frontend, database, ...}
+  performanceReqs   String?  // JSON: {pageLoad, apiResponse, ...}
+  securityReqs      String?  // JSON: {authMethod, encryption, compliance}
+  scalabilityReqs   String?  // JSON: {expectedUsers, peakLoad, dataVolume}
+  accessibilityReq  String?  // "A" | "AA" | "AAA"
+
+  // Step 7: Data & APIs
+  dataModel         String?  // JSON: [{entity, fields, relationships}]
+  externalAPIs      String?  // JSON: [{name, purpose, criticality}]
+  dataPrivacy       String?  // JSON: {gdpr, hipaa, retention, ...}
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  generatedSpec     GeneratedSpec?
+  qualityReport     QualityReport?
+  repoScan          RepoScanResult?
+}
+
+model GeneratedSpec {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  session           WizardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // decisions.yaml output
+  decisionsYaml     String   // Complete YAML with all decisions
+
+  // 18-section markdown spec
+  specMarkdown      String   // 30,000+ character document
+
+  // Section metadata (for navigation)
+  sections          String   // JSON: [{number, title, completeness, warnings}]
+
+  // Quality metrics
+  totalCharacters   Int
+  totalSections     Int      @default(18)
+  avgSectionLength  Int
+
+  createdAt         DateTime @default(now())
+
+  // Future: multiple artifact types
+  artifacts         Artifact[]
+}
+
+model Artifact {
+  id                String   @id @default(uuid())
+  specId            String
+  spec              GeneratedSpec @relation(fields: [specId], references: [id], onDelete: Cascade)
+
+  type              String   // "markdown" | "yaml" | "openapi" | "db-schema" | "diagrams"
+  content           String   // The actual artifact content
+  filename          String   // Suggested download filename
+
+  createdAt         DateTime @default(now())
+}
+
+model QualityReport {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  session           WizardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Completeness checks (0-100)
+  overallScore      Float
+  sectionScores     String   // JSON: {section1: 95, section2: 80, ...}
+
+  // Validation results
+  errors            String   // JSON: [{section, field, message, severity}]
+  warnings          String   // JSON: [{section, field, message}]
+  suggestions       String   // JSON: [{section, field, message}]
+
+  // Vagueness detection
+  vagueTermsFound   String   // JSON: [{term, location, suggestion}]
+  missingDetails    String   // JSON: [{section, what_is_missing}]
+
+  // Gate results
+  passedQualityGate Boolean  @default(false)
+  requiredFixes     String?  // JSON: string[] - must fix these
+
+  createdAt         DateTime @default(now())
+}
+
+model RepoScanResult {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  session           WizardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Detected information
+  detectedTech      String   // JSON: {languages, frameworks, databases}
+  existingFeatures  String   // JSON: string[]
+  fileStructure     String   // JSON: directory tree
+  dependencies      String   // JSON: package.json, requirements.txt, etc
+
+  // Recommendations
+  migrations        String?  // JSON: [{from, to, reason}]
+  gaps              String?  // JSON: [{area, missing_items}]
+
+  createdAt         DateTime @default(now())
+}
